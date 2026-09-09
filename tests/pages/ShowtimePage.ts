@@ -1,9 +1,18 @@
 import { Locator, Page } from '@playwright/test';
 
-// Online bookings close ~5 minutes before a showtime starts, so a showtime that
-// has already begun still renders a seat map but is rejected at the final step.
-// The buffer also leaves room for the rest of the journey to complete.
+// The app reports its cutoff as "-5 minutes before showtimes", i.e. sales appear
+// to close a few minutes *after* a screening starts. This buffer keeps the
+// happy path clear of that boundary and leaves room for the journey to finish.
 const BOOKING_BUFFER_MINUTES = 20;
+
+// Conversely, a showtime must be well past that grace window before it is
+// reliably rejected; one that started a minute ago can still reach checkout.
+const PAST_CUTOFF_MARGIN_MINUTES = 30;
+
+// Listings for "today" also carry after-midnight screenings (12:05AM and such).
+// Those parse as early-morning times but are still hours away, so they must not
+// be mistaken for screenings that have already started.
+const EARLY_MORNING_MINUTES = 6 * 60;
 
 function nowInKualaLumpurMinutes(): number {
   const [hours, minutes] = new Intl.DateTimeFormat('en-GB', {
@@ -31,32 +40,37 @@ export class ShowtimePage {
     await this.page.waitForURL(/\/(login|seat-selection)/);
   }
 
-  // Picks the most recently started showtime rather than the earliest, so the
-  // booking is only just past its cutoff — screenings from hours earlier are a
-  // less representative state to exercise.
-  async selectMostRecentlyStartedShowtime(): Promise<void> {
+  // Picks the most recent screening that is safely past the sales cutoff: recent
+  // enough to be a representative state, but not so recent that it falls inside
+  // the grace window and can still be booked.
+  async selectShowtimePastBookingCutoff(): Promise<void> {
     const showtimes = this.twoDShowtimes();
     const labels = await showtimes.allInnerTexts();
     const now = nowInKualaLumpurMinutes();
+    const cutoff = now - PAST_CUTOFF_MARGIN_MINUTES;
 
-    let startedIndex = -1;
-    let startedAt = -1;
+    let closedIndex = -1;
+    let closedAt = -1;
     labels.forEach((label, index) => {
       const startsAt = this.startTimeInMinutes(label);
-      if (startsAt !== null && startsAt <= now && startsAt > startedAt) {
-        startedAt = startsAt;
-        startedIndex = index;
+      if (startsAt === null) return;
+      if (startsAt < EARLY_MORNING_MINUTES && now >= EARLY_MORNING_MINUTES) return;
+
+      if (startsAt <= cutoff && startsAt > closedAt) {
+        closedAt = startsAt;
+        closedIndex = index;
       }
     });
 
-    if (startedIndex === -1) {
+    if (closedIndex === -1) {
       throw new Error(
-        'No 2D showtime has started yet today, so the booking cutoff cannot be exercised. ' +
-          'This test needs to run after the first screening of the day (Malaysia time).',
+        `No 2D showtime started more than ${PAST_CUTOFF_MARGIN_MINUTES} minutes ago, so the ` +
+          'booking cutoff cannot be exercised. This test needs to run once the day of ' +
+          'screenings is under way (Malaysia time).',
       );
     }
 
-    await showtimes.nth(startedIndex).click();
+    await showtimes.nth(closedIndex).click();
     await this.page.waitForURL(/\/(login|seat-selection)/);
   }
 
