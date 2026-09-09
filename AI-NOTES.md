@@ -1,0 +1,2 @@
+Claude Code (Anthropic) was utilized in the creation of this playwright suite.
+Test implementation was built mostly by Claude with a Claude.md scoping the boundaries, coding conventions, and review workflow. I defined the test cases and journey scope, reviewed and verified all generated locators/assertions against the live site and necessary coding conventions, and made final calls on scope and what to exclude.
