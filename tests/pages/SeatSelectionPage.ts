@@ -12,6 +12,30 @@ export class SeatSelectionPage {
     return this.page.getByText(/^\s*[A-Z]\d{2}\s*$/);
   }
 
+  // The booking header renders the cinema directly above a "<date>, <time> at
+  // <hall>" line, and neither carries a role, label or test id to target. They
+  // are read from the rendered text here and asserted with real locators on the
+  // page that follows.
+  async bookingDetails(): Promise<{ cinema: string; showtime: string }> {
+    // evaluate() does not auto-wait, so poll for the header to have rendered.
+    await this.page.waitForFunction(() =>
+      /\d{1,2}:\d{2}\s*(AM|PM)\s+at\s+/i.test(document.body.innerText),
+    );
+
+    return this.page.evaluate(() => {
+      const lines = document.body.innerText
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const showtimeIndex = lines.findIndex((line) => /\d{1,2}:\d{2}\s*(AM|PM)\s+at\s+/i.test(line));
+
+      if (showtimeIndex < 1) {
+        throw new Error('Could not read the cinema and showtime from the seat selection header');
+      }
+      return { cinema: lines[showtimeIndex - 1], showtime: lines[showtimeIndex] };
+    });
+  }
+
   async selectFirstAvailableSeat(): Promise<string> {
     const seat = this.availableSeats().first();
     const seatId = (await seat.innerText()).trim();

@@ -13,6 +13,7 @@ test('booking a 2D seat without add-ons reaches review summary ready for checkou
   await homePage.goto();
 
   const moviesListing = await homePage.openMovies();
+  const movieTitle = await moviesListing.firstMovieTitle();
   const moviePage = await moviesListing.selectFirstMovie();
 
   const showtimePage = await moviePage.bookNow(context);
@@ -27,6 +28,7 @@ test('booking a 2D seat without add-ons reaches review summary ready for checkou
   await expect(bookingPage).toHaveURL(/\/seat-selection/);
 
   const seatSelection = new SeatSelectionPage(bookingPage);
+  const { cinema, showtime } = await seatSelection.bookingDetails();
   const seatId = await seatSelection.selectFirstAvailableSeat();
 
   await expect(bookingPage.getByText('Adult x 1', { exact: true })).toBeVisible();
@@ -39,7 +41,14 @@ test('booking a 2D seat without add-ons reaches review summary ready for checkou
 
   await expect(bookingPage).toHaveURL(/epaymentwebapp\.gsc\.com\.my\/review-summary/);
   await expect(reviewSummary.checkoutButton()).toBeVisible();
+
+  // The screening being paid for must be the one that was actually chosen, not
+  // just any valid booking.
+  await expect(bookingPage.getByText(movieTitle).first()).toBeVisible();
+  await expect(bookingPage.getByText(cinema, { exact: true })).toBeVisible();
+  await expect(bookingPage.getByText(showtime, { exact: true })).toBeVisible();
   await expect(bookingPage.getByText(seatId, { exact: true })).toBeVisible();
+
   await expect(bookingPage.getByText('Adult x 1', { exact: true })).toBeVisible();
   // Skipping both add-on steps must leave the total at the ticket price alone.
   await expect(bookingPage.getByText('RM 15.00', { exact: true }).first()).toBeVisible();
