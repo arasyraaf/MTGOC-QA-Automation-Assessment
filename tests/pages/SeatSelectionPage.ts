@@ -43,6 +43,19 @@ export class SeatSelectionPage {
     return seatId;
   }
 
+  // Once selected, the seat ID also appears in the summary bar, but the seat on
+  // the map comes first in the DOM and is the one that toggles the selection.
+  async deselectSeat(seatId: string): Promise<void> {
+    await this.page.getByText(seatId, { exact: true }).first().click();
+  }
+
+  // The same control confirm() uses. With nothing selected it stays clickable
+  // rather than being disabled, so the guard lives in the handler and the click
+  // is expected to go nowhere.
+  async attemptConfirmWithNoSeats(): Promise<void> {
+    await this.page.getByText('Confirm - 0 ticket(s)', { exact: true }).click();
+  }
+
   async confirm(): Promise<AddOnsPage> {
     // This label also appears inside the collapsed ticket-type panel, so match
     // on exact text rather than role to hit the summary bar's control.

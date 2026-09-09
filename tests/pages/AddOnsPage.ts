@@ -22,12 +22,6 @@ export class AddOnsPage {
     return new ReviewSummaryPage(this.page);
   }
 
-  // Same click as skipUpselling, but without expecting to arrive anywhere: the
-  // booking can still be rejected at this point, which leaves you on /upselling.
-  async attemptToLeaveUpselling(): Promise<void> {
-    await this.proceedWithoutAdding();
-  }
-
   private async proceedWithoutAdding(): Promise<void> {
     await this.page.getByRole('button', { name: 'RM 0.00' }).click();
   }
