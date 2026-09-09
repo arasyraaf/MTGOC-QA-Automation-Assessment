@@ -1,14 +1,19 @@
 # QA Automation Assessment
 
 ## Running
+
 npm install
+
 npx playwright install
 
 Create a `.env` file with valid login credentials that has been registered (login is required on most runs to reach seat selection):
+
 GSC_MOBILE_NUMBER=
+
 GSC_PASSWORD=
 
 npx playwright test
+
 npx playwright show-report
 
 ## Test cases covered
