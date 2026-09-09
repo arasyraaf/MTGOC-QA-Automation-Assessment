@@ -43,6 +43,14 @@ export class SeatSelectionPage {
     return seatId;
   }
 
+  // The ticket price varies by day and showtime, so it is read from the summary
+  // bar rather than assumed. Only meaningful once a seat is selected; before
+  // that the bar reads RM 0.00.
+  async ticketPrice(): Promise<string> {
+    const price = this.page.getByText(/^\s*RM\s*\d+\.\d{2}\s*$/);
+    return (await price.innerText()).trim();
+  }
+
   // Once selected, the seat ID also appears in the summary bar, but the seat on
   // the map comes first in the DOM and is the one that toggles the selection.
   async deselectSeat(seatId: string): Promise<void> {

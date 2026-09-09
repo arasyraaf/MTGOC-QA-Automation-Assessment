@@ -25,14 +25,19 @@ test('deselecting a seat clears the summary and blocks checkout', async ({ page,
 
   const seatId = await seatSelection.selectFirstAvailableSeat();
   await expect(bookingPage.getByText('Adult x 1', { exact: true })).toBeVisible();
-  await expect(bookingPage.getByText('RM 15.00', { exact: true })).toBeVisible();
   await expect(bookingPage.getByText('Confirm - 1 ticket(s)', { exact: true })).toBeVisible();
+
+  // Priced per day and showtime, so read it rather than assume it; the guards
+  // keep a mis-read from making the "cleared" assertion below vacuous.
+  const ticketPrice = await seatSelection.ticketPrice();
+  expect(ticketPrice).toMatch(/^RM \d+\.\d{2}$/);
+  expect(ticketPrice).not.toBe('RM 0.00');
 
   await seatSelection.deselectSeat(seatId);
 
   await expect(bookingPage.getByText('Confirm - 0 ticket(s)', { exact: true })).toBeVisible();
   await expect(bookingPage.getByText('Adult x 1', { exact: true })).toBeHidden();
-  await expect(bookingPage.getByText('RM 15.00', { exact: true })).toBeHidden();
+  await expect(bookingPage.getByText(ticketPrice, { exact: true })).toBeHidden();
 
   await seatSelection.attemptConfirmWithNoSeats();
 

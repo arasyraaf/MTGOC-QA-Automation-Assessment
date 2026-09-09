@@ -32,8 +32,13 @@ test('booking a 2D seat without add-ons reaches review summary ready for checkou
   const seatId = await seatSelection.selectFirstAvailableSeat();
 
   await expect(bookingPage.getByText('Adult x 1', { exact: true })).toBeVisible();
-  await expect(bookingPage.getByText('RM 15.00', { exact: true })).toBeVisible();
   await expect(bookingPage.getByText('Confirm - 1 ticket(s)', { exact: true })).toBeVisible();
+
+  // Priced per day and showtime, so it is carried forward from here rather than
+  // hardcoded. These guards keep a mis-read from making the later checks vacuous.
+  const ticketPrice = await seatSelection.ticketPrice();
+  expect(ticketPrice).toMatch(/^RM \d+\.\d{2}$/);
+  expect(ticketPrice).not.toBe('RM 0.00');
 
   const addOns = await seatSelection.confirm();
   const reviewSummary = await addOns.skipAll();
@@ -50,6 +55,12 @@ test('booking a 2D seat without add-ons reaches review summary ready for checkou
   await expect(bookingPage.getByText(seatId, { exact: true })).toBeVisible();
 
   await expect(bookingPage.getByText('Adult x 1', { exact: true })).toBeVisible();
-  // Skipping both add-on steps must leave the total at the ticket price alone.
-  await expect(bookingPage.getByText('RM 15.00', { exact: true }).first()).toBeVisible();
+
+  // Both add-on steps were skipped, so neither may contribute a charge and the
+  // Total must still equal the price quoted back at seat selection. That price
+  // renders on the Ticket(s) row as well as the Total row, so the total is the
+  // later of the two.
+  await expect(bookingPage.getByText('N/A', { exact: true })).toHaveCount(2);
+  await expect(bookingPage.getByText(ticketPrice, { exact: true })).toHaveCount(2);
+  await expect(bookingPage.getByText(ticketPrice, { exact: true }).last()).toBeVisible();
 });
