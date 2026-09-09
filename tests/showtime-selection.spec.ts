@@ -17,7 +17,7 @@ test('selecting a 2D showtime and logging in reaches seat selection', async ({ p
   const showtimePage = await moviePage.bookNow(context);
   await expect(showtimePage.page).toHaveURL(/epaymentwebapp\.gsc\.com\.my\/showtime-by-movies/);
 
-  await showtimePage.selectFirst2DShowtime();
+  await showtimePage.selectFirstBookable2DShowtime();
 
   if (showtimePage.page.url().includes('/login')) {
     const loginPage = new LoginPage(showtimePage.page);
