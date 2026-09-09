@@ -31,6 +31,35 @@ export class ShowtimePage {
     await this.page.waitForURL(/\/(login|seat-selection)/);
   }
 
+  // Picks the most recently started showtime rather than the earliest, so the
+  // booking is only just past its cutoff — screenings from hours earlier are a
+  // less representative state to exercise.
+  async selectMostRecentlyStartedShowtime(): Promise<void> {
+    const showtimes = this.twoDShowtimes();
+    const labels = await showtimes.allInnerTexts();
+    const now = nowInKualaLumpurMinutes();
+
+    let startedIndex = -1;
+    let startedAt = -1;
+    labels.forEach((label, index) => {
+      const startsAt = this.startTimeInMinutes(label);
+      if (startsAt !== null && startsAt <= now && startsAt > startedAt) {
+        startedAt = startsAt;
+        startedIndex = index;
+      }
+    });
+
+    if (startedIndex === -1) {
+      throw new Error(
+        'No 2D showtime has started yet today, so the booking cutoff cannot be exercised. ' +
+          'This test needs to run after the first screening of the day (Malaysia time).',
+      );
+    }
+
+    await showtimes.nth(startedIndex).click();
+    await this.page.waitForURL(/\/(login|seat-selection)/);
+  }
+
   private async firstShowtimeStillBookableToday(): Promise<Locator | null> {
     const showtimes = this.twoDShowtimes();
     const cutoff = nowInKualaLumpurMinutes() + BOOKING_BUFFER_MINUTES;
